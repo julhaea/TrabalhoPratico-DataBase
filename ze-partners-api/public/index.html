@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Zé Partners - Frontend</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    form { margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+    pre { background: #f4f4f4; padding: 10px; border-radius: 5px; }
+  </style>
+</head>
+<body>
+  <h1>Zé Partners API</h1>
+
+  <form id="formCriarParceiro">
+    <h2>Criar Parceiro</h2>
+    <input type="text" name="tradingName" placeholder="Nome do Estabelecimento" required>
+    <input type="text" name="ownerName" placeholder="Nome do Proprietário" required>
+    <input type="text" name="document" placeholder="CNPJ" required>
+    
+    <h3>Coordenadas</h3>
+    <input type="text" name="lng" placeholder="Longitude" required>
+    <input type="text" name="lat" placeholder="Latitude" required>
+    
+    <h3>Área de Cobertura</h3>
+    <textarea name="coverageArea" placeholder='{"type":"MultiPolygon","coordinates":[...]}' required></textarea>
+    
+    <button type="submit">Criar</button>
+  </form>
+
+  <form id="formParceiroID">
+    <h2>Buscar Parceiro por ID</h2>
+    <input type="text" name="id" placeholder="ID do Parceiro" required>
+    <button type="submit">Buscar</button>
+  </form>
+  <pre id="parceiroID"></pre>
+
+
+  <form id="formParceiroProximo">
+    <h2>Buscar Parceiro Mais Próximo</h2>
+    <input type="text" name="lat" placeholder="Latitude" required>
+    <input type="text" name="long" placeholder="Longitude" required>
+    <button type="submit">Buscar</button>
+  </form>
+  <pre id="parceiroProximo"></pre>
+
+  <script>
+
+    async function fetchAPI(endpoint, method, data = null) {
+      const options = {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+      };
+      if (data) options.body = JSON.stringify(data);
+
+      const response = await fetch(`http://localhost:3000/api${endpoint}`, options);
+      return await response.json();
+    }
+
+    document.getElementById('formCriarParceiro').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  try {
+    const formData = new FormData(e.target);
+    const coverageArea = formData.get('coverageArea');
+    
+    // Validação básica do JSON
+    JSON.parse(coverageArea); // Testa se é válido
+    
+    const response = await fetchAPI('/partners', 'POST', {
+      tradingName: formData.get('tradingName'),
+      ownerName: formData.get('ownerName'),
+      document: formData.get('document'),
+      lng: formData.get('lng'),
+      lat: formData.get('lat'),
+      coverageArea: coverageArea
+    });
+
+    if (response.id) {
+      alert(`Parceiro criado com ID: ${response.id}`);
+      e.target.reset();
+    }
+  } catch (err) {
+    alert(`Erro: ${err.message}\n\nVerifique o formato da área de cobertura!`);
+    console.error("Erro no frontend:", err);
+  }
+});
+    // Busca por ID
+    document.getElementById('formParceiroID').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = e.target.id.value;
+      const resultado = await fetchAPI(`/partners/${id}`, 'GET');
+      document.getElementById('parceiroID').textContent = JSON.stringify(resultado, null, 2);
+    });
+
+    // Busca mais próximo
+    document.getElementById('formParceiroProximo').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const lat = e.target.lat.value;
+      const long = e.target.long.value;
+      const resultado = await fetchAPI(`/partners/search?lat=${lat}&long=${long}`, 'GET');
+      document.getElementById('parceiroProximo').textContent = JSON.stringify(resultado, null, 2);
+    });
+  </script>
+</body>
+</html>
